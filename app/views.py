@@ -1,6 +1,6 @@
 import os
 from app import app, db, login_manager
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask import render_template, request, redirect, url_for, flash, session, abort,send_from_directory
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
@@ -26,6 +26,11 @@ def about():
     """Render the website's about page."""
     return render_template('about.html', name="Mary Jane")
 
+@app.route('/logout')
+def logout_user():
+    flash('Logged out!!!')
+    return redirect(url_for('home'))
+
 
 @app.route('/upload', methods=['POST', 'GET'])
 @login_required
@@ -48,11 +53,21 @@ def upload():
 
     return render_template('upload.html',form=form)
 
+@app.route('/uploads/<filename>', methods=['GET'])
+def get_image(filename):
+    rootdir=os.getcwd()
+    return send_from_directory(os.path.join(os.getcwd(),app.config['UPLOAD_FOLDER']), filename)
+
+@app.route('/files', methods=['GET'])
+@login_required
+def files():
+    images=get_uploaded_images()
+    return render_template('files.html',images=images)
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
     form = LoginForm()
-
+    
     # change this to actually validate the entire form submission
     # and not just one field
     if form.validate_on_submit():
@@ -84,7 +99,18 @@ def login():
 def load_user(id):
     return db.session.execute(db.select(UserProfile).filter_by(id=id)).scalar()
 
+#Load Images
+def get_uploaded_images():
+    rootdir = os.getcwd()
+    uploaded_images = []
+    #print ("Line 1",rootdir)
 
+    for subdir, dirs, files in os.walk(rootdir + '/uploads'):
+        for file in files:
+            uploaded_images.append(os.path.join(subdir, file).split("\\")[-1])
+    return uploaded_images[1:]
+            #print ("Line 2",os.path.join(subdir, file))
+    
 ###
 # The functions below should be applicable to all Flask apps.
 ###
